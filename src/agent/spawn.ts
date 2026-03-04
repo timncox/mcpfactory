@@ -6,7 +6,7 @@
  * (scaffolding files, installing deps, compiling TypeScript).
  */
 
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import { getSystemPrompt, getUserPrompt } from "./prompts.js";
 import type { ToolSpec } from "./prompts.js";
 
@@ -80,10 +80,14 @@ export async function spawnAgent(
     });
 
     for await (const message of conversation) {
-      messages.push({
-        type: message.type,
-        text: message.type === "text" ? message.text : undefined,
-      });
+      if (message.type === "result") {
+        messages.push({
+          type: message.type,
+          text: message.subtype === "success" ? message.result : undefined,
+        });
+      } else {
+        messages.push({ type: message.type });
+      }
     }
 
     return { success: true, messages };
