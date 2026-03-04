@@ -40,6 +40,16 @@ export async function handleCreateMcp(
 ): Promise<Array<{ type: "text"; text: string }>> {
   const { name, description, tools, env_vars } = args;
 
+  // Validate server name to prevent path traversal and invalid config keys
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(name)) {
+    return [
+      {
+        type: "text" as const,
+        text: `Invalid server name: "${name}". Name must contain only alphanumeric characters and hyphens, and start with an alphanumeric character.`,
+      },
+    ];
+  }
+
   const serversBase = join(homedir(), "mcpfactory", "servers");
   const serverDir = join(serversBase, name);
 
