@@ -1,0 +1,22 @@
+{
+  "name": "ascii-art-generator",
+  "version": "1.0.0",
+  "description": "An ASCII Art Generator MCP that creates themed ASCII art for web designs, terminal UIs, and decorative elements",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "ascii-art-generator": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.12.0"
+  }
+}

@@ -6,6 +6,7 @@
  */
 
 import { listFactoryServers } from "../config/desktop-config.js";
+import { listFactoryServersInClaudeCode } from "../config/claude-code-config.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -57,17 +58,29 @@ export async function handleListMcps(): Promise<
     ];
   }
 
-  // 2. Cross-reference with Claude Desktop config
-  let installedServers: Record<string, unknown>;
+  // 2. Cross-reference with Claude Desktop config and Claude Code settings
+  let desktopServers: Record<string, unknown>;
   try {
-    installedServers = await listFactoryServers();
+    desktopServers = await listFactoryServers();
   } catch {
-    installedServers = {};
+    desktopServers = {};
+  }
+
+  let claudeCodeServers: Record<string, unknown>;
+  try {
+    claudeCodeServers = await listFactoryServersInClaudeCode();
+  } catch {
+    claudeCodeServers = {};
   }
 
   // The config keys are prefixed with "mcp-factory-"
-  const installedNames = new Set(
-    Object.keys(installedServers).map((key) =>
+  const desktopNames = new Set(
+    Object.keys(desktopServers).map((key) =>
+      key.replace(/^mcp-factory-/, ""),
+    ),
+  );
+  const claudeCodeNames = new Set(
+    Object.keys(claudeCodeServers).map((key) =>
       key.replace(/^mcp-factory-/, ""),
     ),
   );
@@ -76,11 +89,20 @@ export async function handleListMcps(): Promise<
   const lines: string[] = [`MCP Factory Servers (${serverDirs.length}):\n`];
 
   for (const name of serverDirs.sort()) {
-    const installed = installedNames.has(name);
-    const status = installed ? "installed" : "not installed";
+    const inDesktop = desktopNames.has(name);
+    const inClaudeCode = claudeCodeNames.has(name);
+    const statuses: string[] = [];
+    if (inDesktop) statuses.push("Desktop");
+    if (inClaudeCode) statuses.push("Claude Code");
+    const status = statuses.length > 0
+      ? `installed: ${statuses.join(", ")}`
+      : "not installed";
     const dir = join(serversBase, name);
     lines.push(`  - ${name} [${status}]`);
     lines.push(`    Directory: ${dir}`);
+    if (inClaudeCode) {
+      lines.push(`    Agent teams: available`);
+    }
   }
 
   return [

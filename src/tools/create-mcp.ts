@@ -8,6 +8,7 @@
 import { spawnAgent, type ToolSpec } from "../agent/spawn.js";
 import { testMcpServer } from "../testing/mcp-tester.js";
 import { addServer } from "../config/desktop-config.js";
+import { addServerToClaudeCode } from "../config/claude-code-config.js";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -101,16 +102,29 @@ export async function handleCreateMcp(
 
   console.error(`[create-mcp] Tests passed. Installing to Claude Desktop...`);
 
-  // 4. Install to Claude Desktop config
+  // 4. Install to Claude Desktop config and Claude Code settings
+  const entryPoint = join(serverDir, "dist", "index.js");
+  const installErrors: string[] = [];
+
   try {
-    const entryPoint = join(serverDir, "dist", "index.js");
     await addServer(name, "node", [entryPoint], env_vars);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    installErrors.push(`Claude Desktop: ${message}`);
+  }
+
+  try {
+    await addServerToClaudeCode(name, "node", [entryPoint], env_vars);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    installErrors.push(`Claude Code: ${message}`);
+  }
+
+  if (installErrors.length === 2) {
     return [
       {
         type: "text" as const,
-        text: `MCP server "${name}" was created and tested successfully, but failed to install to Claude Desktop config.\nError: ${message}\n\nServer directory: ${serverDir}\nTools: ${formatToolList(testResult.tools)}`,
+        text: `MCP server "${name}" was created and tested successfully, but failed to install to configs.\nErrors:\n${installErrors.map((e) => `  - ${e}`).join("\n")}\n\nServer directory: ${serverDir}\nTools: ${formatToolList(testResult.tools)}`,
       },
     ];
   }
@@ -121,10 +135,14 @@ export async function handleCreateMcp(
       ? `\nTools:\n${formatToolList(testResult.tools)}`
       : "\nNo tools were detected.";
 
+  const installStatus = installErrors.length > 0
+    ? `\nInstall warnings:\n${installErrors.map((e) => `  - ${e}`).join("\n")}`
+    : "";
+
   return [
     {
       type: "text" as const,
-      text: `Successfully created and installed MCP server "${name}".\n\nDirectory: ${serverDir}\nInstalled: Yes (Claude Desktop config updated)${toolsSummary}\n\nRestart Claude Desktop to activate the new server.`,
+      text: `Successfully created and installed MCP server "${name}".\n\nDirectory: ${serverDir}\nClaude Desktop: ${installErrors.some((e) => e.startsWith("Claude Desktop:")) ? "failed" : "installed"}\nClaude Code: ${installErrors.some((e) => e.startsWith("Claude Code:")) ? "failed" : "installed (available to agent teams)"}${installStatus}${toolsSummary}\n\nRestart Claude Desktop / start a new Claude Code session to activate.`,
     },
   ];
 }

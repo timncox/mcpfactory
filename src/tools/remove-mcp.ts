@@ -6,6 +6,7 @@
  */
 
 import { removeServer } from "../config/desktop-config.js";
+import { removeServerFromClaudeCode } from "../config/claude-code-config.js";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -34,7 +35,7 @@ export async function handleRemoveMcp(
 
   const results: string[] = [];
 
-  // 1. Remove from Claude Desktop config
+  // 1. Remove from Claude Desktop config and Claude Code settings
   try {
     await removeServer(name);
     results.push(`Removed "${name}" from Claude Desktop config.`);
@@ -42,6 +43,16 @@ export async function handleRemoveMcp(
     const message = err instanceof Error ? err.message : String(err);
     results.push(
       `Warning: Failed to remove "${name}" from Claude Desktop config: ${message}`,
+    );
+  }
+
+  try {
+    await removeServerFromClaudeCode(name);
+    results.push(`Removed "${name}" from Claude Code settings.`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    results.push(
+      `Warning: Failed to remove "${name}" from Claude Code settings: ${message}`,
     );
   }
 
@@ -58,7 +69,7 @@ export async function handleRemoveMcp(
 
   results.push(
     "",
-    "Restart Claude Desktop to complete the removal.",
+    "Restart Claude Desktop / start a new Claude Code session to complete the removal.",
   );
 
   return [
