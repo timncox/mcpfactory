@@ -2,9 +2,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { execSync } from "child_process";
-import { existsSync } from "fs";
+import { execSync, execFileSync } from "child_process";
+import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
+import { PDFParse } from "pdf-parse";
 
 const server = new McpServer({
   name: "menu-parser",
@@ -179,11 +180,63 @@ server.tool(
       };
     }
 
-    // Shell out to claude CLI to parse the menu PDF
+    // Extract text from the PDF
+    let pdfText: string;
+    try {
+      const pdfBuffer = readFileSync(resolvedPath);
+      const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+      const textResult = await parser.getText();
+      pdfText = textResult.text;
+      await parser.destroy();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unknown error reading PDF";
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                error: true,
+                message: `Failed to extract text from PDF: ${message}`,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+
+    if (!pdfText.trim()) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                error: true,
+                message:
+                  "PDF appears to contain no extractable text (it may be image-based). Text-based PDFs are required.",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+
+    // Build the prompt with the extracted menu text
+    const fullPrompt = `${EXTRACTION_PROMPT}\n\n--- MENU TEXT ---\n${pdfText}\n--- END MENU TEXT ---`;
+
+    // Shell out to claude CLI to parse the menu text
+    // Use execFileSync to avoid shell argument length limits with large PDFs
     let rawOutput: string;
     try {
-      rawOutput = execSync(
-        `${claudePath} --print -f ${JSON.stringify(resolvedPath)} ${JSON.stringify(EXTRACTION_PROMPT)}`,
+      rawOutput = execFileSync(
+        claudePath,
+        ["-p", fullPrompt, "--output-format", "text"],
         {
           encoding: "utf-8",
           maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs

@@ -7,6 +7,7 @@
 
 import { listFactoryServers } from "../config/desktop-config.js";
 import { listFactoryServersInClaudeCode } from "../config/claude-code-config.js";
+import { listFactoryServersInCodex } from "../config/codex-config.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -73,6 +74,13 @@ export async function handleListMcps(): Promise<
     claudeCodeServers = {};
   }
 
+  let codexServers: Record<string, unknown>;
+  try {
+    codexServers = await listFactoryServersInCodex();
+  } catch {
+    codexServers = {};
+  }
+
   // The config keys are prefixed with "mcp-factory-"
   const desktopNames = new Set(
     Object.keys(desktopServers).map((key) =>
@@ -84,6 +92,11 @@ export async function handleListMcps(): Promise<
       key.replace(/^mcp-factory-/, ""),
     ),
   );
+  const codexNames = new Set(
+    Object.keys(codexServers).map((key) =>
+      key.replace(/^mcp-factory-/, ""),
+    ),
+  );
 
   // 3. Format output
   const lines: string[] = [`MCP Factory Servers (${serverDirs.length}):\n`];
@@ -91,9 +104,11 @@ export async function handleListMcps(): Promise<
   for (const name of serverDirs.sort()) {
     const inDesktop = desktopNames.has(name);
     const inClaudeCode = claudeCodeNames.has(name);
+    const inCodex = codexNames.has(name);
     const statuses: string[] = [];
     if (inDesktop) statuses.push("Desktop");
     if (inClaudeCode) statuses.push("Claude Code");
+    if (inCodex) statuses.push("Codex");
     const status = statuses.length > 0
       ? `installed: ${statuses.join(", ")}`
       : "not installed";

@@ -9,6 +9,7 @@ import { spawnAgent, type ToolSpec } from "../agent/spawn.js";
 import { testMcpServer } from "../testing/mcp-tester.js";
 import { addServer } from "../config/desktop-config.js";
 import { addServerToClaudeCode } from "../config/claude-code-config.js";
+import { addServerToCodex } from "../config/codex-config.js";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -120,7 +121,14 @@ export async function handleCreateMcp(
     installErrors.push(`Claude Code: ${message}`);
   }
 
-  if (installErrors.length === 2) {
+  try {
+    await addServerToCodex(name, "node", [entryPoint], env_vars);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    installErrors.push(`Codex: ${message}`);
+  }
+
+  if (installErrors.length === 3) {
     return [
       {
         type: "text" as const,
@@ -142,7 +150,7 @@ export async function handleCreateMcp(
   return [
     {
       type: "text" as const,
-      text: `Successfully created and installed MCP server "${name}".\n\nDirectory: ${serverDir}\nClaude Desktop: ${installErrors.some((e) => e.startsWith("Claude Desktop:")) ? "failed" : "installed"}\nClaude Code: ${installErrors.some((e) => e.startsWith("Claude Code:")) ? "failed" : "installed (available to agent teams)"}${installStatus}${toolsSummary}\n\nRestart Claude Desktop / start a new Claude Code session to activate.`,
+      text: `Successfully created and installed MCP server "${name}".\n\nDirectory: ${serverDir}\nClaude Desktop: ${installErrors.some((e) => e.startsWith("Claude Desktop:")) ? "failed" : "installed"}\nClaude Code: ${installErrors.some((e) => e.startsWith("Claude Code:")) ? "failed" : "installed (available to agent teams)"}\nCodex: ${installErrors.some((e) => e.startsWith("Codex:")) ? "failed" : "installed"}${installStatus}${toolsSummary}\n\nRestart Claude Desktop / Codex / start a new Claude Code session to activate.`,
     },
   ];
 }

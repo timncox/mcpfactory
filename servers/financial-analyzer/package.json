@@ -1,0 +1,22 @@
+{
+  "name": "financial-analyzer",
+  "version": "1.0.0",
+  "description": "An MCP server for standard business financial calculations: revenue projections, utilization analysis, and churn analysis.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "financial-analyzer": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/node": "latest"
+  }
+}

@@ -7,6 +7,7 @@
 
 import { removeServer } from "../config/desktop-config.js";
 import { removeServerFromClaudeCode } from "../config/claude-code-config.js";
+import { removeServerFromCodex } from "../config/codex-config.js";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -56,6 +57,16 @@ export async function handleRemoveMcp(
     );
   }
 
+  try {
+    await removeServerFromCodex(name);
+    results.push(`Removed "${name}" from Codex config.`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    results.push(
+      `Warning: Failed to remove "${name}" from Codex config: ${message}`,
+    );
+  }
+
   // 2. Delete the server directory
   try {
     await rm(serverDir, { recursive: true, force: true });
@@ -69,7 +80,7 @@ export async function handleRemoveMcp(
 
   results.push(
     "",
-    "Restart Claude Desktop / start a new Claude Code session to complete the removal.",
+    "Restart Claude Desktop / Codex / start a new Claude Code session to complete the removal.",
   );
 
   return [
